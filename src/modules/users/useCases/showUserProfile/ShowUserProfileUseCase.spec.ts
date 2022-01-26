@@ -1,39 +1,45 @@
-import { InMemoryUsersRepository } from "../../repositories/in-memory/InMemoryUsersRepository"
-import { AuthenticateUserUseCase } from "../authenticateUser/AuthenticateUserUseCase"
-import { CreateUserUseCase } from "../createUser/CreateUserUseCase"
+import { InMemoryUsersRepository } from "../../repositories/in-memory/InMemoryUsersRepository";
+import { CreateUserUseCase } from "../createUser/CreateUserUseCase";
+import { ShowUserProfileUseCase } from "./ShowUserProfileUseCase";
 
-let authenticateUserUseCase: AuthenticateUserUseCase
-let createUserUseCase: CreateUserUseCase
-let userRepositoryInMemory: InMemoryUsersRepository
+import { ShowUserProfileError } from './ShowUserProfileError'
 
 
-describe('Autheticate User', () => {
+let usersRepositoryInMemory: InMemoryUsersRepository;
+let createUserUseCase: CreateUserUseCase;
+let showUserProfileUseCase: ShowUserProfileUseCase;
 
+describe("Should be able to show user profile", () => {
   beforeEach(() => {
-    userRepositoryInMemory = new InMemoryUsersRepository();
-    createUserUseCase = new CreateUserUseCase(userRepositoryInMemory);
-    authenticateUserUseCase = new AuthenticateUserUseCase(userRepositoryInMemory);
-  })
+    usersRepositoryInMemory = new InMemoryUsersRepository();
+    createUserUseCase = new CreateUserUseCase(
+      usersRepositoryInMemory,
+    );
+    showUserProfileUseCase = new ShowUserProfileUseCase(
+      usersRepositoryInMemory,
+    );
+  });
+  it("Should be possible to show a user's profile", async () => {
+    const userDTO = {
+      name: "teste",
+      email: "teste@teste.com",
+      password: "123456",
+    };
+    const user = await createUserUseCase.execute(userDTO);
 
+    const findUser = await showUserProfileUseCase.execute(user.id || "test")
+    expect(findUser.name).toBe("teste");
+  });
 
-  it('shold be able to authenticate', async () => {
-    const { email } = await createUserUseCase.execute({
-      email: 'teste@teste.com',
-      name: 'teste',
-      password: 'teste'
-    })
-
-    const user = await authenticateUserUseCase.execute({ email, password: 'teste' })
-
-    expect(user).toHaveProperty("token")
-  })
-
-  it('shold be not able to authenticate with email or password incorrect', () => {
+  it("Shouldn't be able to show the profile of a non-existent user", async () => {
     expect(async () => {
-      await authenticateUserUseCase.execute({
-        email: 'teste@teste.com',
-        password: 'teste2'
-      })
-    }).rejects.toBeInstanceOf(ShowUserProfileError)
-  })
-})
+      const userDTO = {
+        name: "teste",
+        email: "teste@teste.com",
+        password: "123456",
+      };
+      const user = await createUserUseCase.execute(userDTO);
+      await showUserProfileUseCase.execute("fakeid");
+    }).rejects.toBeInstanceOf(ShowUserProfileError);
+  });
+});
